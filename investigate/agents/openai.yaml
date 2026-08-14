@@ -1,0 +1,7 @@
+interface:
+  display_name: "Investigate"
+  short_description: "Deep investigations for any Codex workflow"
+  default_prompt: "Use $investigate to resolve the uncertain part of this workflow and produce an evidence-based report with next steps."
+
+policy:
+  allow_implicit_invocation: true

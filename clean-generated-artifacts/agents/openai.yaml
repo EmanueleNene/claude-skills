@@ -1,0 +1,4 @@
+interface:
+  display_name: "Clean Generated Artifacts"
+  short_description: "Safely classify and remove generated artifacts"
+  default_prompt: "Use $clean-generated-artifacts to prepare an evidence-safe cleanup manifest for this work."

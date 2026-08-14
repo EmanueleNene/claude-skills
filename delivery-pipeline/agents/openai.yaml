@@ -1,0 +1,4 @@
+interface:
+  display_name: "Delivery Pipeline"
+  short_description: "Run evidence-to-presentation delivery workflow"
+  default_prompt: "Use $delivery-pipeline to investigate, plan, implement, review, clean, explain, and present this change."

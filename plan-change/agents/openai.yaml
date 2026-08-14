@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Change"
+  short_description: "Turn evidence into an executable change plan"
+  default_prompt: "Use $plan-change to convert the investigation or request into a verifiable implementation plan."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Present It HTML"
+  short_description: "Build an offline HTML delivery briefing"
+  default_prompt: "Use $present-it-html to turn the completed work and evidence into a standalone HTML briefing."
