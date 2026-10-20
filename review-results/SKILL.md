@@ -1,91 +1,76 @@
 ---
 name: review-results
-description: "Synthesize and critically analyze simulation outputs, test runs, sweep data, or iteration artifacts, highlighting anomalies, hypotheses, physical invariants, and conclusions. Use when the user asks to review, inspect, or summarize simulation results, benchmark data, or run outputs, or invokes /review-results."
+description: "Critically review the results of the last run: simulations, sweeps, test runs, benchmarks, experiments, or any iteration output. Use when the user invokes /review-results, asks to review, inspect, check, or summarize results or run outputs, or asks whether a run worked."
 ---
 
 # Review Results
 
-Synthesize, diagnose, and critically analyze numerical simulation outputs, parametric sweeps, convergence sweeps, or benchmark data. Connect quantitative observations directly to physical mechanics and code logic.
+Act as a **skeptical reviewer**: the results are guilty until the evidence clears them. Read the actual outputs,
+connect the dots, and say what the numbers do and do not support.
 
-## 5-Stage Analysis Pipeline
+## 1. Inventory
 
-### 1. Evidence & Artifact Inventory
-Identify and locate the exact output files and runs under review:
-- Solver listings and output logs (`*.out`, `file.out`, `Two_BEAM.out`, etc.).
-- Convergence and sweep records (`max_res.txt`, CSVs under `plots/`, `multiscale_bench/*.json`).
-- Deck files and environmental overrides applied (e.g. `nbeam1`, `fc`, `HYG_*` flags).
-- Record the exact parameters of the run (mesh density $N$, geometry $W, H, L$, angle $\theta$, load type).
+List exactly what is under review, read from the files, not assumed:
 
-### 2. Numerical Sanity & Solver Convergence Checks
-Before interpreting physics, verify numerical validity:
-- **Newton-Raphson convergence**: Did the solver reach true equilibrium? Check residual norms ($F_{\text{res}}$, $U_{\text{res}}$) against tolerances.
-- **Divergence / Bifurcation**: Look for cutback substeps, high iteration counts, or solver warnings (`*** WARNING ***`, `*** ERROR ***`).
-- **Conditioning**: Check for large pivot warnings, zero pivots, or severe stiffness matrix ill-conditioning.
+- outputs: logs, listings, CSV/JSON, plots, test reports
+- inputs: script, config, parameters, flags, data version
+- the baseline it is compared against: previous run, reference, analytical value, expected behaviour
 
-### 3. Physical Invariant & Conservation Checks
-Evaluate fundamental mechanics and problem invariants:
-- **Equilibrium / Reaction Balance**: Do reaction forces balance external loads ($R^T f = 0$)? Do master and slave contact forces sum to zero?
-- **Symmetry Error**: For symmetric cases (e.g. `Two_BEAM_sym.txt`), evaluate $\text{SymmErr} = |\max(U_z)| - |\min(U_z)| \to 0$.
-- **Asymptotic Limits**: Does the response approach known analytical limits at extreme geometries (e.g., rigid beam, thin beam, $0^\circ$ or $90^\circ$ alignments)?
-- **Monotonicity**: Does refinement produce monotonic convergence, or is there parity oscillation between even and odd meshes?
+Missing a baseline or key output → say so and ask before drawing conclusions.
 
-### 4. Anomaly Identification & Hypothesis Formation
-If the data diverges from expectation, isolate the root mechanism into one of four distinct categories:
-1. **Discretization Error**: Insufficient mesh density, element interpolation limits, shear-locking, or integration rule limitations.
-2. **Kinematic / Geometric Modeling Limit**: 1D beam assumption breaking down in 3D zones (e.g., cross-sectional distortion, out-of-plane warping, Poisson expansion).
-3. **Contact / Interface Mechanics**: Penalty stiffness artifact ($K_n$ too stiff causing ill-conditioning, or too soft causing penetration), contact projection drift, or $cp \approx \pm 1$ boundary effects.
-4. **Implementation / Software Defect**: Coordinate transformation error, sign convention mismatch, unit discrepancy, or uninitialized common block variable.
+## 2. Did the run work?
 
-### 5. Synthesis & Plain-Language Delivery
-Structure the report cleanly for decision-making:
-- **Executive Metric Table**: Quantitative comparison against baseline or 3D solid truth (SOLSH).
-- **Visual Artifact**: ASCII curve/diagram or trend table showing convergence, error distributions, or deformed shape.
-- **Intuitive Explanation**: Apply `explain-it-easy` to translate the numerical finding into clear physical intuition.
-- **Actionable Verdict**: State explicitly whether the run passed, failed, or requires further data, with concrete next steps.
+Check validity before interpreting anything:
 
----
+- finished cleanly: exit status, errors, warnings, timeouts, skipped or failed cases
+- converged or stable, where that applies (solver residuals, training loss, retries)
+- the run used the inputs it was meant to use (right config, right data, right version)
 
-## Output Template
+## 3. Do the results make sense?
+
+Test the numbers against what must hold for this domain:
+
+- **invariants**: conservation, balance, symmetry, totals that must match
+- **limits**: known values at extreme or trivial cases
+- **trends**: monotonic where expected, smooth under refinement, no odd/even or run-to-run flip-flop
+- **baseline**: difference vs baseline, and whether it is inside noise or tolerance
+
+## 4. Anomalies and hypotheses
+
+For each anomaly, name the most likely cause category and a test that would confirm or kill it:
+
+| Category | Examples |
+|---|---|
+| resolution / sampling | mesh, step size, sample count, too few repeats |
+| model limit | an assumption that breaks in this regime |
+| setup / input | wrong parameter, units, data, environment |
+| implementation defect | sign, index, unit conversion, uninitialized state |
+| measurement / noise | timing jitter, randomness, flaky test |
+
+Escalate to `investigate` when a cause stays unresolved.
+
+## 5. Report
+
+Use the `explain-it-easy` style. Visual first: tables, Unicode plots and drawings, bullets.
 
 ```text
-================================================================================
-SIMULATION / SWEEP REVIEW SUMMARY
-================================================================================
-Run / Deck:         <deck or script name>
-Configuration:      W=<...>, H=<...>, Angle=<...>, Mesh N=<...>
-Solver Status:      [CONVERGED / UNCONVERGED / WARNINGS]
+RESULTS REVIEW — <run name>
+Inputs:   <key parameters>
+Status:   WORKED / FAILED / WARNINGS
 
-1. QUANTITATIVE METRICS & PARITY
---------------------------------------------------------------------------------
-| Metric / DOF    | Current Run | Baseline / Truth | Discrepancy (%) | Status |
-| :-------------- | :---------- | :--------------- | :-------------- | :----- |
-| Max Uz (mm)     | ...         | ...              | ...             | [OK]   |
-| Symmetry Err    | ...         | 0.000            | ...             | [OK]   |
-| Order p / GCI   | ...         | Asymptotic (2.0) | ...             | [OK]   |
+| Metric | Current | Baseline | Diff | Status |
+|--------|---------|----------|------|--------|
 
-2. PHYSICAL INVARIANTS & CONVERGENCE BEHAVIOR
---------------------------------------------------------------------------------
-[ASCII plot, convergence diagram, or force balance summary]
+Trend / invariant check:  <Unicode plot or table>
 
-3. MECHANICAL FINDINGS & ROOT CAUSE
---------------------------------------------------------------------------------
-• Primary Observation: <what the numbers demonstrate>
-• Underlying Mechanism: <physics or code cause>
-• Anomaly / Risk: <any unexpected trend or numerical artifact>
+Findings:
+• What the numbers show
+• Likely mechanism
+• Anomalies / risks
 
-4. VERDICT & NEXT STEPS
---------------------------------------------------------------------------------
-1. <Action 1: e.g. accept baseline, refit stiffness, or adjust mesh>
-2. <Action 2: sweep or validation script to execute next>
-================================================================================
+Verdict:   ACCEPT / REJECT / NEED MORE DATA
+Next:      1. <concrete action or run>  2. ...
 ```
 
-## Completion Criteria
-
-The review is complete when:
-- [ ] Output listings/data files are directly checked rather than assumed.
-- [ ] Solver convergence and residual tolerances are verified.
-- [ ] Key physical invariants (symmetry, equilibrium, monotonicity) are quantified.
-- [ ] Any discrepancy is attributed to a testable mechanism (discretization, kinematics, contact, or code).
-- [ ] A structured summary table and ASCII diagram are presented.
-- [ ] Concrete, falsifiable next steps are provided.
+Done when: every number cited was read from an output, validity is checked, each anomaly has a cause category and a
+test, and the verdict comes with concrete next steps.
