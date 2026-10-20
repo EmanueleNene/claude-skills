@@ -1,6 +1,6 @@
 ---
 name: graphify-windows
-description: "any input (code, docs, papers, images) → knowledge graph → clustered communities → HTML + JSON + audit report. Use when user asks any question about a codebase, project content, architecture, or file relationships — especially if graphify-out/ exists. Provides persistent graph with god nodes, community detection, and BFS/DFS query tools."
+description: "Build or explore a persistent knowledge graph of code, documents, or research. Use when the user invokes /graphify, requests a knowledge graph or clustered relationship map, or asks to query or trace paths in an existing graphify graph. Ordinary codebase questions and the presence of graphify-out/ alone do not trigger this skill."
 trigger: /graphify
 ---
 
@@ -54,11 +54,17 @@ Use it for:
 
 ## What You Must Do When Invoked
 
+Choose the requested operation before running commands:
+- Build a graph: follow the full pipeline below.
+- Query, path, explain, add, update, cluster-only, or watch: use the matching section directly; run only its prerequisites. A graph query is not permission to rebuild the corpus.
+- For ordinary codebase or architecture questions, inspect the relevant source files directly. Use this workflow when the user requests graph-based analysis, not merely because `graphify-out/` exists.
+- Install persistent integrations (git hooks, watchers, or CLAUDE.md integration) only when explicitly requested.
+
 If the user invoked `/graphify --help` or `/graphify -h` (with no other arguments), print the contents of the `## Usage` section above verbatim and stop. Do not run any commands, do not detect files, do not default the path to `.`. Just print the Usage block and return.
 
 If no path was given, use `.` (current directory). Do not ask the user for a path.
 
-Follow these steps in order. Do not skip steps.
+For a full graph build, follow these steps in order. For other operations, follow their matching sections.
 
 ### Step 1 - Ensure graphify is installed
 

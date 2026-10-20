@@ -1,4 +1,4 @@
 interface:
   display_name: "Present It HTML"
-  short_description: "Build an offline HTML delivery briefing"
-  default_prompt: "Use $present-it-html to turn the completed work and evidence into a standalone HTML briefing."
+  short_description: "Present code, data or a concept as an offline HTML page"
+  default_prompt: "Use $present-it-html to present this as a standalone HTML page with graphs and diagrams."

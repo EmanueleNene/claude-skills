@@ -1,119 +1,81 @@
 ---
 name: present-it-html
-description: Turn completed technical work and its investigation, plan, implementation, validation, review, cleanup, and plain-language explanation into a polished standalone HTML briefing. Use when the user wants to present project results visually, create a decision-ready engineering report, or package delivery evidence into one offline HTML file.
+description: Present code, data, or a concept as a standalone offline HTML page built around graphs, plots, and diagrams. Use when the user wants something explained visually or as an HTML page, or when a delivery run needs its results briefing.
 ---
 
 # Present It HTML
 
-Create a decision briefing from existing evidence. Preserve uncertainty rather than rediagnosing the work or filling gaps with plausible claims.
+Make the reader *see* it: every section leads with a picture, and prose explains the picture.
 
-## Inputs
+## Branches
 
-Collect:
+- **Explanation** (default): one question about code, data, or a concept — a mechanism, a cause, a result.
+- **Briefing**: completed work packaged for a decision, e.g. from `$delivery-pipeline`.
 
-- objective, audience, and requested output path;
-- investigation or problem analysis;
-- implementation plan;
-- changed-component summary or diff;
-- validation commands, results, artifacts, and limitations;
-- separate Standards and Spec review results when available;
-- cleanup manifest and apply status;
-- plain-language explanation.
+## Rules for both branches
 
-Label missing artifacts `Not run`, `Unavailable`, or `Pending`.
+- **Picture first.** Each section opens with an inline SVG diagram, a plot, or a table. One figure, one idea: build a hard idea as a sequence of simple figures, from zero.
+- **Plots from real data.** Read the numbers from the source files. Label axes with units. Embed as inline SVG or a PNG data URI (matplotlib is fine).
+- **Evidence.** Every number and claim cites its source (`path:line`, command, or artifact) next to the claim and in a source index. Label inference as inference. Quantitative claims state baseline, units, and threshold where they exist.
+- **Plain language.** Define each term at first use. Short sentences.
+- **Offline single file.** Inline CSS, viewport meta, `@media print`, visible focus styles; no remote script, stylesheet, image, or font. Normal hyperlinks as citations are fine.
+- **House style.** If the project already has an HTML page of this kind (same folder first), reuse its CSS.
+- **Engineering drawings use third-angle projection (ASME Y14.3).** Top view above the front view, right view or section to the right, all aligned. Label each view (`TOP VIEW`, `FRONT VIEW`, `SECTION A-A`). Cutting-plane lines carry arrows in the viewing direction. Hidden edges dashed, cut faces hatched, axis triad in each view.
+- Every SVG has a `<title>`; every image has `alt` text.
 
-## Process
+## Steps
 
-### 1. Establish the message
+### 1. Answer
 
-Write the one-sentence outcome, the audience's decision or takeaway, the strongest supporting evidence, and the material limitation.
+Write the one-sentence answer (explanation) or outcome (briefing).
 
-Complete this step when title, executive summary, status, and conclusion express the same evidence-backed state.
+Done when the title, the lead, and the conclusion state the same evidence-backed answer.
 
-### 2. Build the storyboard
+### 2. Outline
 
-Use this order:
+**Explanation:**
+1. header — the question, then the answer;
+2. figures that build the idea, one concept each;
+3. evidence table with the key numbers;
+4. limits, open points, and what was left out;
+5. sources.
 
-1. hero with outcome and status badges;
-2. executive summary in plain language;
-3. problem and impact;
-4. investigation evidence and causal chain;
-5. plan and change map;
-6. implementation summary with real components;
-7. validation results and acceptance criteria;
-8. Standards and Spec review as separate axes;
-9. cleanup status and preserved evidence;
-10. takeaways, risks, and next actions;
-11. source index with files, commands, artifacts, and URLs.
-
-Complete this step when every material claim has a source and every delivery stage is represented honestly.
-
-### 3. Design visual evidence
-
-Use at least two visual types selected for the content:
-
-- inline SVG for a pipeline, causal chain, architecture, state, or before/after flow;
-- table for acceptance criteria, change maps, comparisons, or review findings;
-- metric cards for exact measured results;
-- timeline for the delivery sequence;
-- embedded plot for trends;
-- annotated code block for a decisive implementation seam.
-
-Put `<title>` in every SVG and `alt` text on every image. Prefer direct labels and semantic HTML over decoration.
-
-### 4. Write one standalone file
-
-Write to the caller's path. Otherwise write `presentation.html` in the caller's delivery-run directory.
-
-Required section IDs:
+**Briefing** — section IDs in this order:
 
 ```text
 executive-summary problem investigation plan implementation validation
 review cleanup takeaways sources
 ```
 
-Requirements:
+Keep Standards and Spec review as separate axes. Label a missing stage `Not run`, `Unavailable`, or `Pending`.
 
-- inline CSS, responsive layout, visible focus styles, and `@media print` rules;
-- no remote script, stylesheet, image, font, or CDN dependency;
-- embedded plots as data URIs or inline SVG;
-- concise plain-language summary with progressively disclosed technical detail;
-- exact statuses such as passed, failed, limited, pending, waived, or not run;
-- source references next to consequential claims and a complete source index.
+Done when every section has a figure or table and every claim has a source.
 
-Normal external hyperlinks are allowed as citations; visual and executable assets remain offline.
+### 3. Write the file
 
-### 5. Embed local images
+Path, first match wins:
+1. the caller's path;
+2. a delivery run: `<run>/presentation.html`;
+3. work that belongs to a ticket: the ticket folder, `present_<topic-slug>.html`;
+4. otherwise the working directory, `present_<topic-slug>.html`.
 
-Resolve `<skill-dir>` to this skill's installed directory. If the draft references local images, run:
+### 4. Embed local images
 
-```text
-python <skill-dir>/scripts/embed_local_assets.py \
-  <presentation.html> --asset-root <workspace> --in-place
-```
-
-Complete this step when every local image is embedded in the HTML file.
-
-### 6. Validate
-
-Run:
+If the page references local images, run (`<skill-dir>` = this skill's directory):
 
 ```text
-python <skill-dir>/scripts/validate_presentation.py <presentation.html>
+python <skill-dir>/scripts/embed_local_assets.py <page.html> --asset-root <workspace> --in-place
 ```
 
-Visually inspect desktop, mobile, and print layouts when a safe browser-capable tool is available. Correct overflow, empty diagrams, unreadable labels, and evidence mismatches.
+Done when no `<img>` points to a local file.
 
-Complete this step when the validator passes and every displayed number, status, component, and citation agrees with its source.
+### 5. Validate
 
-## Completion check
+```text
+python <skill-dir>/scripts/validate_presentation.py <page.html>            # briefing
+python <skill-dir>/scripts/validate_presentation.py <page.html> --explain  # explanation
+```
 
-- The file opens offline with no external asset dependency.
-- At least two visual types materially improve understanding.
-- All required sections exist, including separate review axes.
-- Missing and blocked stages are visibly labelled.
-- Quantitative claims include baseline, units, threshold, and evidence path where applicable.
-- Cleanup claims match the manifest.
-- The source index makes every major claim auditable.
+Done when the validator passes.
 
-Return the HTML path, one-sentence outcome, evidence used, validator result, and pending or unavailable stages.
+Return the path, the one-sentence answer, and the validator result.

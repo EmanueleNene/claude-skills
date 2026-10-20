@@ -18,6 +18,8 @@ REQUIRED_IDS = (
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("html", help="presentation HTML file")
+    parser.add_argument("--explain", action="store_true",
+                        help="explanation page: skip the briefing section IDs")
     args = parser.parse_args()
 
     path = Path(args.html)
@@ -42,7 +44,7 @@ def main() -> int:
     if not re.search(r"<meta\b[^>]*\bname\s*=\s*(['\"])viewport\1", text, re.IGNORECASE):
         errors.append("missing viewport metadata")
 
-    for section_id in REQUIRED_IDS:
+    for section_id in () if args.explain else REQUIRED_IDS:
         pattern = rf"\bid\s*=\s*(['\"]){re.escape(section_id)}\1"
         if not re.search(pattern, text, re.IGNORECASE):
             errors.append(f"missing required section id: {section_id}")

@@ -1,147 +1,146 @@
 ---
 name: investigate
-description: Run deep, evidence-driven investigations and produce durable reports covering the situation, analysis, conclusions, uncertainty, and next steps. Use automatically as a primary or supporting workflow alongside other skills when they encounter an unresolved cause, unexpected behavior, repeated failure, conflicting evidence, numerical discrepancy, material uncertainty, or a question that needs root-cause analysis. Also use when the user asks to investigate, examine deeply, determine what happened or why, collect evidence, compare explanations, or create an investigation report.
+description: Run deep, evidence-driven root-cause investigations and produce structured diagnostics or durable reports. Use when the user says "investigate", "why did this fail", "root cause", "find why", "trace this bug", "debug this discrepancy", "what happened here", or invokes /investigate. Also use automatically when another skill encounters an unresolved cause, unexpected failure, numerical discrepancy, or conflicting evidence.
 ---
 
 # Investigate
 
-Perform a disciplined investigation and create a durable Markdown report. Adapt the evidence-gathering method to the subject while keeping facts, inferences, hypotheses, and unknowns distinct.
+Perform a disciplined, evidence-driven investigation and deliver either a fast inline diagnostic or a durable Markdown report. Adapt the evidence-gathering method to the subject while keeping facts, inferences, hypotheses, and unknowns strictly distinct.
 
-## Composition with other skills
+## Investigation Depth Dial
 
-- Operate as the primary workflow when investigation is the main task and as a supporting workflow when another active skill needs an uncertain point resolved.
-- Treat another skill that invokes `$investigate` as the caller. Preserve its objective, constraints, safety boundaries, and output contract.
-- Investigate only the delegated question or unresolved portion. Reuse trustworthy context and evidence already gathered instead of restarting the caller's workflow.
-- Infer the handoff from the conversation and available artifacts. Establish the investigation question, supplied evidence, constraints, and desired report path; ask for missing information only when it blocks meaningful progress.
-- Return a concise handoff containing the report path, principal findings, confidence, unresolved blockers, prioritized next steps, and evidence references.
-- Keep the report understandable on its own while avoiding duplicate artifacts and redundant analysis.
-- Leave implementation, design, review, or other downstream work to the calling skill unless the user explicitly includes it in the investigation scope.
-- Avoid recursively re-invoking the calling skill. Complete the investigation and hand control back to the broader workflow.
+Select the investigation depth based on scope, impact, and user intent:
 
-## Investigation principles
+- **Lightweight Triage (Inline — No File Generated)**:
+  - *When to use*: Localized bugs, straightforward errors, single-file discrepancies, or when the user asks for a quick diagnosis in chat.
+  - *Output*: Deliver directly in conversation using the 5-point format:
+    1. **Core Diagnosis & Root Cause**
+    2. **Evidence Anchor** (exact file, line, command, or log snippet)
+    3. **ASCII Causal Flow Diagram** (trigger → mechanism → symptom)
+    4. **Concrete Minimal Fix & Verification Command**
+    5. **Confidence & Remaining Unknowns**
 
-- Start from the user's actual question and desired decision, not from an assumed cause.
-- Prefer direct evidence: source files, logs, test output, measurements, primary documentation, and reproducible observations.
-- Cite each material claim with a file and line, command result, test, artifact, dataset location, or source URL when available.
-- Label interpretations as inferences and state the evidence supporting them.
-- Track competing hypotheses. Actively seek evidence that could disprove the leading explanation.
-- Record negative results and ruled-out causes when they narrow the search.
-- State confidence and remaining uncertainty. Do not present plausibility as proof.
-- Preserve the investigated state. Follow repository instructions and avoid destructive or expansive actions.
-- Diagnose without implementing a fix unless the user also asks for changes.
-- Ask for input only when missing access, authority, or context prevents meaningful progress. Otherwise, proceed with explicit assumptions.
+- **Full Investigation (Durable Report Generated)**:
+  - *When to use*: Regressions, multi-component failures, numerical/solver discrepancies, intermittent failures, architecture/design breakdowns, or whenever the user asks for an investigation report.
+  - *Output*: Create a structured Markdown report following the template below.
+
+## Composition with Other Skills
+
+- **Primary vs Supporting**: Operate as the primary workflow when root-cause diagnosis is the main task, or as a supporting workflow when caller skills (e.g. `delivery-pipeline`) need an uncertain point resolved.
+- **Strict Scope**: Diagnose without implementing a fix unless the user explicitly authorizes changes.
+- **Handoffs**:
+  - To plan a verified fix: hand off to `$plan-change`.
+  - To clean up diagnostic artifacts/runs: hand off to `$clean-generated-artifacts`.
+  - To present findings to non-technical stakeholders: hand off to `$explain-it-easy` or `$present-it-html`.
+
+## Investigation Principles
+
+- **Root Cause over Symptoms**: Trace backwards from the symptom to the physical or logical mechanism that created the faulty state.
+- **Direct Empirical Evidence**: Prefer direct evidence (source lines, logs, test outputs, memory dumps, reproducible commands) over speculation.
+- **Explicit Inferences**: Label every claim as *Fact* (directly observed), *Inference* (deduced from facts), or *Hypothesis* (plausible but unverified).
+- **Legwork Gate**: Do **NOT** draft, scaffold, or write the report file until discriminating checks have run and evidence has been gathered.
+- **Preserve State**: Follow repository guidelines; never delete or mutate files under investigation without authorization.
 
 ## Workflow
 
-### 1. Frame the investigation
+### 1. Frame the Investigation
+Restate the question in testable terms:
+- Expected behavior vs. observed behavior.
+- Affected vs. unaffected scope (what still works?).
+- Change boundary: timing, commit hash, environment, dependency changes.
+- Determine depth: **Lightweight (Inline)** vs **Full (Report)**.
 
-Restate the investigation question in testable terms. Establish:
+### 2. Establish Baseline & Evidence Ledger
+Capture the state before altering anything. Build a lightweight evidence ledger:
+- Evidence ID (e.g., `E1`, `E2`).
+- Exact source: file path, line number, command, or log timestamp.
+- Observation and relevance.
 
-- the reported situation and its impact;
-- expected behavior versus observed behavior, when applicable;
-- the affected and unaffected scope;
-- timing, frequency, environment, and relevant changes;
-- constraints, safety boundaries, and the decision the report should support.
+### 3. Gather Evidence & Run Discriminating Checks
+Select diagnostic methods matched to the problem:
+- **Runtime / Test Failures**: Reproduce the minimal failing case; trace call stacks and boundary conditions.
+- **Numerical / Physics Discrepancies**: Check inputs, units, coordinate systems, sign conventions, boundary conditions, and formulation invariants.
+- **Regressions**: Perform binary search / diff inspection across the change window.
+- **Performance**: Measure CPU, memory, contention, or I/O before hypothesizing bottlenecks.
 
-Inspect local instructions and existing documentation before choosing methods. Reuse prior reports or artifacts as evidence, but verify claims that may be stale.
+### 4. Test Competing Hypotheses (Disproof Matrix)
+Form multiple plausible explanations. Actively seek tests that could **disprove** each one. Use the **Hypothesis Disproof Matrix**:
 
-### 2. Establish a baseline
+| ID | Hypothesis | Discriminating Check | Expected If True | Observed Result | Verdict | Confidence |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| H1 | State assumption A | Inspect variable X at t=0 | X == 0 | X == 12.4 | **RULED OUT** | High |
+| H2 | Mechanism B | Run test with flag Y | Test passes | Test passes | **CONFIRMED** | High |
 
-Capture the current state before deep analysis. For a codebase, inspect relevant status, configuration, entry points, dependencies, tests, and recent changes without disturbing unrelated user work. For other subjects, identify authoritative sources, known facts, assumptions, and gaps.
+### 5. Build the Causal Flow Diagram
+Map the confirmed failure chain using ASCII/Unicode diagrams:
 
-Create a lightweight evidence ledger while working. For each important item, retain:
-
-- evidence identifier;
-- observation or result;
-- source and retrieval method;
-- relevance;
-- limitations or possible alternative interpretations.
-
-### 3. Gather evidence
-
-Select methods according to the problem:
-
-- For software or runtime failures, reproduce the smallest safe case, inspect errors and logs, trace the execution path, compare working and failing states, and run focused diagnostics.
-- For data or numerical discrepancies, verify inputs, units, assumptions, transformations, boundary conditions, invariants, and sensitivity to controlled changes.
-- For regressions, identify the change window and compare behavior, configuration, dependencies, and environment across the boundary.
-- For performance problems, measure before explaining; separate latency, throughput, resource use, scale, and contention.
-- For general or external questions, prioritize primary and current sources, compare independent evidence, record publication and event dates, and cite URLs.
-- For process or design problems, map actors, states, constraints, handoffs, failure modes, and the evidence for claimed outcomes.
-
-Use the least invasive diagnostic that can distinguish between hypotheses. Record commands and focused outputs that make findings reproducible; exclude secrets and irrelevant bulk output.
-
-### 4. Analyze competing explanations
-
-Form multiple plausible hypotheses when the cause is not already proven. For each hypothesis, document:
-
-- supporting evidence;
-- contradicting evidence;
-- a discriminating check or expected observation;
-- current status: confirmed, likely, possible, unlikely, or ruled out;
-- confidence: high, medium, or low.
-
-Run safe discriminating checks where possible. Continue until the central question is answered with evidence or the remaining blocker is precisely identified. Distinguish:
-
-- root cause from trigger;
-- cause from correlation;
-- primary fault from contributing conditions;
-- observed impact from potential impact;
-- confirmed facts from unresolved unknowns.
-
-### 5. Synthesize findings
-
-Build the explanation as a traceable chain from evidence to conclusion. If no root cause can be confirmed, present the leading explanations, why certainty is limited, and the exact evidence needed next. Do not manufacture closure.
-
-Prioritize next steps by information gain and impact. Separate immediate containment, further verification, corrective work, and prevention when those categories apply. Include a validation condition for any proposed fix or action.
-
-### 6. Create the report
-
-Write a Markdown report to a path supplied by the user. Otherwise, use an established project investigation or documentation directory when one clearly exists; if none exists, create `INVESTIGATION_<topic-slug>.md` in the workspace root. Do not overwrite an unrelated existing report; use a descriptive suffix when needed.
-
-Use the following structure, adapting subsections to the investigation:
-
-```markdown
-# Investigation: <title>
-
-## Executive summary
-<Answer the central question, current confidence, and impact in a few paragraphs.>
-
-## Situation
-### Investigation question
-### Observed and expected state
-### Scope and impact
-### Environment, timeline, and constraints
-
-## Analysis
-### Method
-### Evidence
-### Hypotheses and tests
-### Findings
-### Root cause or leading explanation
-### Contributing factors
-### Ruled-out explanations
-### Limitations and unknowns
-
-## Next steps
-### Immediate actions
-### Further verification
-### Corrective actions
-### Prevention and follow-up
-
-## Evidence index
-<Files and lines, commands, tests, logs, artifacts, datasets, and URLs used.>
+```
+[Trigger / Change] ──> [State Drift / Flaw] ──> [Failure Point] ──> [Observed Symptom]
 ```
 
-Omit empty subsections rather than filling them with boilerplate. For every next step, specify the action, rationale, priority, expected result, and verification criterion. Clearly mark actions that require user approval, external access, or material changes.
+### 6. Generate the Report (For Full Investigations)
 
-## Completion check
+#### Report Placement Policy
+Do **not** clutter the repository root. Save the report in the first matching location:
+1. User-specified path.
+2. `docs/investigations/INVESTIGATION_<topic-slug>.md`
+3. Existing project documentation folder (e.g., `docs/by-date/YYYY-MM-DD/`, `docs/`, `investigations/`).
+4. Workspace root only if no docs folder exists and project conventions permit.
 
-Before delivering, verify that:
+#### Report Template
 
-- the report directly answers the investigation question or states the precise blocker;
-- important conclusions are linked to evidence;
-- contrary evidence and credible alternatives are addressed;
-- confidence, assumptions, limitations, and unknowns are explicit;
-- next steps are ordered, concrete, and verifiable;
-- no fix or external mutation was performed without authorization;
-- the report path is included in the response.
+```markdown
+# Investigation: <Title>
+
+## Executive Summary
+<Brief statement of the core question, confirmed root cause, current confidence, and business/technical impact.>
+
+## Causal Mechanism
+```
+[Trigger / Change] ──> [Intermediate State] ──> [Failure Point] ──> [Observed Symptom]
+```
+
+## Situation
+- **Investigation Question**: <What specifically was investigated?>
+- **Expected vs Observed**: <Clear contrast of expectation vs reality>
+- **Scope & Impact**: <Affected modules, platforms, and severity>
+- **Timeline & Change Window**: <Relevant commits, dates, or environmental changes>
+
+## Hypothesis Disproof Matrix
+| ID | Hypothesis | Discriminating Check | Expected If True | Observed Result | Verdict | Confidence |
+|:---|:---|:---|:---|:---|:---|:---|
+| H1 | ... | ... | ... | ... | Ruled Out / Confirmed | High/Med/Low |
+
+## Analysis & Evidence
+### Confirmed Root Cause
+<Step-by-step physical or logical explanation supported by cited evidence.>
+
+### Contributing Factors & Triggers
+<Secondary conditions that enabled or amplified the fault.>
+
+### Ruled-Out Explanations
+<Why competing theories were eliminated, with evidence references.>
+
+### Limitations & Remaining Unknowns
+<What remains uncertain or untested, and why.>
+
+## Next Steps
+1. **Immediate Containment**: <Temporary mitigation or rollback if needed>
+2. **Corrective Fix**: <Proposed fix with acceptance and verification criteria>
+3. **Prevention**: <Regression tests, lint rules, or assertions to prevent recurrence>
+
+## Evidence Index
+- `E1`: `path/to/file.py:124` — Observation details.
+- `E2`: Command `python tests/TestSuite.py --quick` output log snippet.
+```
+
+## Completion Checklist
+
+Before concluding:
+- [ ] Direct answer to the central question provided with high/medium/low confidence.
+- [ ] Every material conclusion backed by cited evidence (file + line, command, or log).
+- [ ] Competing hypotheses tested and evaluated in the disproof matrix.
+- [ ] ASCII causal chain diagram included.
+- [ ] Report placed cleanly without cluttering repo root (if Full mode).
+- [ ] No unauthorized fixes or file mutations executed.
+- [ ] Clear, verifiable next steps provided (or handoff to `$plan-change`).
