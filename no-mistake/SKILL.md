@@ -66,4 +66,4 @@ Plain language, short:
 - **Validation**: baseline vs final.
 - **Not checked**: what no lens could cover (no tests, no runtime access).
 
-Do not commit. Committing belongs to the user or `close-ticket`.
+When commit and push are already authorized, hand off to `commit-push` with the objective, exact reviewed scope, final validation evidence, and unresolved limitations. Otherwise finish with the report and name `commit-push` as the available next step. Running `no-mistake` alone does not authorize publication.

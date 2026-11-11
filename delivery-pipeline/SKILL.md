@@ -17,6 +17,7 @@ $investigate
   -> $clean-generated-artifacts
   -> $Explain-it-easy
   -> $present-it-html
+  -> $commit-push (when authorized)
 ```
 
 Announce each skill transition. Carry the original objective, project instructions, user authorization, pre-existing work, and safety boundaries through every stage.
@@ -101,6 +102,12 @@ Gate: advance when a reader unfamiliar with the project can state what was wrong
 Invoke `$present-it-html` with the whole run directory and output path `<run>/presentation.html`. Require distinct investigation, plan, implementation, validation, Standards review, Spec review, cleanup, limitation, and next-action sections. Run the bundled validator.
 
 Gate: finish when the HTML is standalone, validator-clean, evidence-linked, and honest about every limited or pending stage.
+
+## Optional finish: Commit and push
+
+When the user authorized commit and push, invoke `$commit-push` after presentation with the objective, baseline, final change scope, validation and review evidence, protected user work, and artifact-preservation rules. Let it resolve which delivery artifacts belong in version control under repository rules. Preserve its scope questions and blockers; passing this pipeline does not authorize unrelated changes or outgoing commits.
+
+Otherwise leave the reviewed work ready for handoff and name `commit-push` as the available next step. Record the published commit and destination, or the precise publication blocker, in the final response. Keep the run ledger final before committing so a post-push status update does not create another local change.
 
 ## Final handoff
 
