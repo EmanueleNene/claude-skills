@@ -1,11 +1,19 @@
 ---
 name: yagni-refactor
-description: "Refactor existing code with YAGNI discipline and pair with code-simplifier. MANDATORY TRIGGERS: 'refactor', 'refactoring', '/refactor', 'clean up this code', 'simplify this', 'simplify code'. Use whenever the user asks to refactor, simplify, or restructure code for maintainability without speculative abstractions."
+description: "Restructure existing code with YAGNI discipline while preserving behavior. Use for /yagni-refactor, /refactor, requests to refactor or restructure code, remove dead code or speculative abstractions, consolidate duplicated policy, or reshape module boundaries. Local readability cleanup belongs to simplify."
 ---
 
-# YAGNI Refactor & Code Simplifier
+# YAGNI Refactor
 
 Refactor for the next concrete change, not an imagined future. Prefer deletion, locality, and deep modules over additional layers, and apply code simplification to ensure maximum clarity and maintainability.
+
+## Routing
+
+- `/yagni-refactor`, `/refactor`, "refactor this code", and requests for structural changes select this skill.
+- Own dead-code removal, unnecessary-layer removal, shared-policy consolidation, and changes to interfaces or module boundaries.
+- Local readability requests and an otherwise unspecified "simplify this code" or "clean up this code" select `simplify`.
+- For mixed wording, use the concrete requested change rather than the generic verb. An explicit skill command takes precedence over this inference.
+- When both structure and readability need work, run this workflow once and use its clarity pass in step 4.
 
 ## 1. Establish the contract
 

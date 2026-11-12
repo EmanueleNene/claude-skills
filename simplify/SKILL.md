@@ -1,12 +1,20 @@
 ---
 name: simplify
-description: "Simplify code to reduce cognitive workload while preserving understanding, project naming and other conventions, and exact functionality. Use when the user requests code simplification or when the model identifies a readability improvement in recently modified or targeted code during authorized coding work. Also available to other skills for a clarity pass. Pair with `yagni-refactor` when structural bloat or dead abstractions need cutting first."
+description: "Improve local code readability while preserving behavior and project conventions. Use for /simplify, requests to simplify code, clarify names, flatten control flow, or make code easier to read, and for a clarity pass during authorized coding work. Explicit refactoring or structural cleanup belongs to yagni-refactor."
 disable-model-invocation: false
 ---
 
 # Simplify (Code Simplifier)
 
 Reduce the cognitive workload needed to read code: fewer facts to keep in mind, fewer jumps to understand a flow, and clearer domain intent. Preserve or improve understanding while strictly preserving functionality and project conventions. Fewer lines, tokens, variables, or functions are not success criteria. Focus on recently modified or targeted code lines.
+
+## Routing
+
+- `/simplify`, "simplify this code", "make this easier to read", and an otherwise unspecified "clean up this code" select this skill.
+- Work on names, expressions, comments, and local control flow within the existing structure.
+- Requests to refactor or restructure code, remove dead code or speculative abstractions, or reshape module boundaries select `yagni-refactor`.
+- For mixed wording, the concrete requested change determines the route: "simplify by removing this unused abstraction" selects `yagni-refactor`; "refactor these names for readability" selects `simplify`.
+- Other skills may call this skill for a bounded clarity pass. If readability work reveals structural work outside the requested scope, report that opportunity separately.
 
 ## Principles
 
