@@ -1,18 +1,19 @@
 ---
 name: no-mistake
-description: Final gate before commit or PR - code-review, simplify + yagni-refactor, and a Codex review on one diff, merged into one verified change.
+description: Final gate before commit or PR - code-review, simplify + yagni-refactor, a Codex review, and an Antigravity (Gemini) review on one diff, merged into one verified change.
 disable-model-invocation: true
 ---
 
 # No Mistake
 
-One gate, three reviewers on the same diff, one merged result.
+One gate, four reviewers on the same diff, one merged result.
 
 | Agent | Skills | Question |
 |-------|--------|----------|
 | Correct | `code-review` | Is it wrong, unsafe, or untested? |
 | Lean | `simplify` + `yagni-refactor` | Is any line speculative, deletable, or harder to read than needed? |
 | Codex | Codex CLI `review` | Second model family: what did Claude miss? |
+| Agy | Antigravity CLI, `gemini-4-hydrogen-high` | Third model family: what did Claude and Codex miss? |
 
 Lean's two skills can contradict (simplify extracts a helper, yagni deletes it); the agent resolves that itself, deletion first. No reviewer edits. They **propose**, the parent **edits once**.
 
@@ -30,7 +31,7 @@ Done when the baseline result is recorded. A red baseline is reported, not fixed
 
 ## 3. Review in parallel, propose-only
 
-Spawn two agents and start the Codex review in one message. Every agent gets: the target list, the skill name(s) to follow, and this contract:
+Spawn two agents and start the Codex and Agy reviews in one message. Every agent gets: the target list, the skill name(s) to follow, and this contract:
 
 - Read-only. Edit nothing.
 - Return findings as `file:line | problem | proposed fix | agent`.
@@ -55,14 +56,22 @@ Bash calls do not share variables: repeat the `CODEX=` line in every call that u
 
 Target flags from step 1: uncommitted work → `--scope working-tree` (covers staged, unstaged, untracked); last commit → `--base HEAD~1`; range or branch → `--base <ref>`. Codex cannot narrow to paths; drop its findings outside the target in step 4. Treat its output as findings tagged `codex`; its top-severity bugs (`[P0]`/`[P1]`, or `critical`/`high`) count as `BUG`. If the run fails, continue without it and list Codex under **Not checked**.
 
-Done when both agents and the Codex run have reported.
+**Agy.** Skip it when `command -v agy` finds nothing; list it under **Not checked**. Otherwise run in the background with `Bash` (`run_in_background: true`) from the repo root:
+
+```bash
+agy -p "<prompt>" --model gemini-4-hydrogen-high
+```
+
+The prompt carries the same contract as the agents, plus how to see the diff (the git command matching the step 1 target, e.g. `git diff HEAD` plus the untracked file list, or `git show HEAD`) and the target file list. Do not pass `--mode plan` (it writes a plan file instead of answering) or `--dangerously-skip-permissions`. After it returns, check `git status` is unchanged; if Agy edited anything, stop and show the user what changed (do not revert: the target may hold uncommitted user work). Treat its output as findings tagged `agy`; findings it marks `BUG` count as `BUG`. If the run fails, continue without it and list Agy under **Not checked**.
+
+Done when both agents, the Codex run, and the Agy run have reported.
 
 ## 4. Merge
 
 In the parent, one list:
 
 1. **Dedupe** findings on the same line.
-2. **Resolve conflicts** by priority: `BUG` > Lean. A Codex finding no other reviewer raised gets verified in the code before it is accepted. Deletion beats extraction.
+2. **Resolve conflicts** by priority: `BUG` > Lean. A Codex or Agy finding no other reviewer raised gets verified in the code before it is accepted. Deletion beats extraction.
 3. **Reject** any finding that does not trace to the diff or to behavior the diff touches (surgical changes).
 4. **Escalate** to the user any `BUG` fix that changes public behavior, and any fix needing code outside the target.
 
