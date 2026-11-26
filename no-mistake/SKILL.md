@@ -37,7 +37,7 @@ First run the availability checks below (`command -v agy`, Codex `setup --json`,
 { git status --porcelain; git diff HEAD; git ls-files -o --exclude-standard -z | xargs -0 -r git hash-object; } 2>/dev/null | git hash-object --stdin
 ```
 
-Then start all four reviewers (or their stand-ins) in one message, each in the background. Every reviewer gets the target list, how to see the diff (the git command matching the step 1 target, e.g. `git diff HEAD` plus the untracked file list, or `git show HEAD`), its lens, and this contract:
+Then start all four reviewers (or their stand-ins) in one message, each in the background. Every reviewer gets the target list, how to see the diff (the git command matching the step 1 target, e.g. `git diff HEAD` plus the untracked file list, or `git show HEAD`, and to read untracked target files in full), its lens, and this contract:
 
 - Read-only. Edit nothing.
 - Return each finding as `file:start-end (symbol) | problem with its failure path (input or state -> wrong result) | exact fix (old -> new, or a short diff) | check that proves it | reviewer`.
@@ -49,7 +49,7 @@ Then start all four reviewers (or their stand-ins) in one message, each in the b
 agy -p "<prompt>" --model gemini-4-hydrogen-high --print-timeout 20m
 ```
 
-Agy cannot load Claude skills by name: for a skill lens, the prompt tells the reviewer (Agy, or its `sonnet` fallback) to read `~/.claude/skills/<skill>/SKILL.md` and use only its review criteria on the step 1 diff. It skips the skill's process: no fixed-point or spec questions, no subagents, no other skills, no questions to the user. Keep `--mode plan` (it writes a plan file instead of answering) and `--dangerously-skip-permissions` off the command. When all runs are back, retake the fingerprint; if it changed, a reviewer edited something: stop and show the user `git status` and `git diff HEAD` (do not revert: the target may hold uncommitted user work).
+Agy cannot load Claude skills by name: for a skill lens, the prompt tells the reviewer (Agy, or its `sonnet` fallback) to read `~/.claude/skills/<skill>/SKILL.md` and use only its review criteria on the step 1 diff (for `Correct`, also check correctness bugs, safety/security flaws, and missing tests as `BUG`s). It skips the skill's process: no fixed-point or spec questions, no subagents, no other skills, no questions to the user. Keep `--mode plan` (it writes a plan file instead of answering) and `--dangerously-skip-permissions` off the command. Retake the fingerprint before launching any fallback for a failed run, and again when all runs finish; if it changed, a reviewer edited something: stop and show the user `git status` and `git diff HEAD` (do not revert: the target may hold uncommitted user work).
 
 **Correct and Lean.** Agy runs with the lens skills from the table. If the user typed an effort level, Correct runs on the matching variant (`gemini-4-hydrogen-low`/`-medium`/`-high`/`-xhigh`). Without `agy`, or when a run fails, spawn that reviewer as a `sonnet` subagent with the same lens and contract.
 
@@ -66,17 +66,17 @@ If ready (`"ready": true` and `"loggedIn": true`), pick the Astra model from the
 grep -io '"slug": *"[^"]*astra[^"]*"' ~/.codex/models_cache.json | head -1 | cut -d'"' -f4
 ```
 
-Run with `--model <that slug>` on both `review` and `adversarial-review`; with no Astra slug, drop `--model` and Codex uses its configured default. These commands take no effort flag: effort comes from `model_reasoning_effort` in `~/.codex/config.toml`, which should be `medium` or `high`. Read it, report it, and leave the user's config as is.
+Run with `--model <slug>` on both `review` and `adversarial-review`; with no Astra slug, drop `--model` and Codex uses its configured default. These commands take no effort flag: effort comes from `model_reasoning_effort` in `~/.codex/config.toml`, which should be `medium` or `high`. Read it, report it in step 7's `Reviewers:` line, and leave the user's config as is.
 
 ```bash
-node "$CODEX" review --wait --model <slug> <target flags>
+node "$CODEX" review --wait [--model <slug>] <target flags>
 ```
 
 Bash calls do not share variables: repeat the `CODEX=` line in every call that uses it.
 
-Target flags from step 1: uncommitted work → `--scope working-tree` (covers staged, unstaged, untracked); last commit → `--base HEAD~1`; range or branch → `--base <ref>`. Codex cannot narrow to paths; drop its findings outside the target in step 4. Its top-severity bugs (`[P0]`/`[P1]`, or `critical`/`high`) count as `BUG`. When Codex is not ready or the run fails, a stand-in takes its place here and in step 6 (the step 6 stand-in reviews the working-tree diff of the target paths): an Agy run asked for a general bug review, else a `haiku` subagent. Tag findings `codex` either way and name the stand-in in the report.
+Target flags from step 1: uncommitted work → `--scope working-tree` (covers staged, unstaged, untracked); last commit → `--base HEAD~1`; range or branch → `--base <ref>`. Codex cannot narrow to paths; drop its findings outside the target in step 4. Its top-severity bugs (`[P0]`/`[P1]`, or `critical`/`high`) count as `BUG`. When Codex is not ready or the run fails, a stand-in takes its place here and in step 6 (the step 6 stand-in reviews the working-tree diff of the target paths (reading untracked target files in full)): an Agy run asked for a general bug review, else a `haiku` subagent. Tag findings `codex` either way and name the stand-in in the report.
 
-**Adversary.** An Agy run whose prompt is adversarial: break confidence in the change and find the strongest reasons it should not ship. Point it at trust boundaries, data loss or corruption, partial failure and retries, races and stale state, empty/null/timeout and degraded dependencies, and compatibility regressions. Material findings only, each with a concrete failure path; no style; a closing verdict `approve` or `needs-attention`. Findings it marks `BUG` count as `BUG`. Without `agy`, or when the run fails, fall back in order: Codex when ready (`node "$CODEX" adversarial-review --wait --model <slug> <target flags> "<path1>" "<path2>"`, one quoted argument per path; its `critical`/`high` count as `BUG`), else a `haiku` subagent with the same prompt. Tag findings `adversary` either way.
+**Adversary.** An Agy run whose prompt is adversarial: break confidence in the change and find the strongest reasons it should not ship. Point it at trust boundaries, data loss or corruption, partial failure and retries, races and stale state, empty/null/timeout and degraded dependencies, and compatibility regressions. Material findings only, each with a concrete failure path; no style; a closing verdict `approve` or `needs-attention`. Findings it marks `BUG` count as `BUG`. Without `agy`, or when the run fails, fall back in order: Codex when ready (`node "$CODEX" adversarial-review --wait [--model <slug>] <target flags> "<path1>" "<path2>"`, one quoted argument per path; its `critical`/`high` count as `BUG`), else a `haiku` subagent with the same prompt. Tag findings `adversary` either way.
 
 Done when all four reviewers (or their stand-ins) have reported.
 
@@ -95,11 +95,11 @@ Done when every finding is marked applied, rejected (with reason), or escalated.
 
 Apply the accepted list in one pass, smallest edits first. Rerun the step 2 command.
 
-Done when the validation matches or beats the baseline. If it regressed, revert the edit that caused it and mark that finding rejected.
+Done when the validation matches or beats the baseline. If it regressed, revert the edit that caused it and mark that finding **reverted**.
 
 ## 6. Codex recheck, once
 
-Skip if step 5 applied nothing. Otherwise rerun Codex in the foreground with `--scope working-tree` (or its step 3 stand-in, on the working-tree diff of the target paths), whatever the step 3 flags were: the step 5 fixes are uncommitted, and `--base` reviews only committed history. Drop findings outside the target and the step 5 edits. Merge the rest with the step 4 rules, apply, and rerun the step 2 command; revert any edit that regresses validation and mark that finding **Open**. If Codex fails here, use the step 3 stand-in. A stand-in gets the step 3 contract, and an Agy stand-in is bracketed by the fingerprint check.
+Skip if step 5 applied nothing. Otherwise rerun Codex in the foreground with `--scope working-tree` (falling back to the step 3 stand-in on the working-tree diff of the target paths (reading untracked target files in full) if Codex did not run or fails here), whatever the step 3 flags were: the step 5 fixes are uncommitted, and `--base` reviews only committed history. Drop findings outside both the target and the step 5 edits. Merge the rest with the step 4 rules, apply, and rerun the step 2 command; revert any edit that regresses validation and mark that finding **reverted**. A stand-in gets the step 3 contract, and an Agy stand-in is bracketed by a fresh fingerprint check.
 
 One round only. Accepted recheck findings you do not apply go to the report as **Open**; ones the step 4 rules reject go under **Rejected** with the reason. No third Codex run.
 
@@ -109,16 +109,16 @@ Done when the recheck findings are applied, rejected, or listed as open, and val
 
 Two readers, one report. The user has ADHD and scans the top layer; another agent must be able to act on any row from the bottom layer alone, without re-reviewing. Row numbers tie the two layers together. Shape it like this and nothing else:
 
-1. **First line: verdict and next action.** `GREEN - shipping` or `BLOCKED - <the one thing to decide>`.
-2. **One table**, the items that need the user's eyes first (escalated, open), then bugs fixed, then simplified:
+1. **First line: verdict and next action.** `GREEN - shipping`, `GREEN - stopped (no publish)`, or `BLOCKED - <the one thing to decide>`.
+2. **One table**, the items that need the user's eyes first (escalated, open, reverted), then bugs fixed, then simplified:
 
    | # | Where | Problem | Fix | Status |
    |---|-------|---------|-----|--------|
    | 1 | `src/auth.ts:42` | null token crashes login | guard `token` | fixed |
 
-   `Where` is a clickable `file:line`. `Problem` and `Fix` are at most 8 words each. `Status` is one word: `fixed`, `escalated`, `open`, `reverted`. At most 5 rows per status; past that, one row `+N more <status>` (those rows still get detail blocks).
+   `Where` is a clickable `file:line`. `Problem` and `Fix` are at most 8 words each. `Status` is one word: `fixed`, `escalated`, `open`, `reverted`. Number every finding once, `1..N`, in table order; the table keeps those numbers. At most 5 rows per status; past that, one row `+N more <status> (#a-#b)` naming the hidden numbers, which still get detail blocks.
 3. **Three short lines** under the table:
-   - `Reviewers:` engine per reviewer, stand-ins named, adversary verdict. Example: `Correct agy, Lean agy, Codex agy stand-in, Adversary agy (needs-attention)`.
+   - `Reviewers:` engine per reviewer, stand-ins named, Codex effort from `config.toml`, adversary verdict. Example: `Correct agy, Lean agy, Codex astra/high (or agy stand-in), Adversary agy (needs-attention)`.
    - `Validation:` baseline -> final, or `none in repo`.
    - `Not checked:` what no reviewer could cover, in a few words.
 4. **Rejected** findings: one line, count plus a short reason each, e.g. `Rejected 3: style only (2), outside target (1)`.
@@ -146,7 +146,7 @@ Invoking `/no-mistake` authorizes commit, push, and ticket close when the gate i
 
 - Baseline was not red, and final validation matches or beats it (no validation command at all is allowed; say so in the report).
 - Nothing was escalated in step 4 or step 6.
-- Every verified `BUG` is fixed: none left **Open**, none rejected because its fix regressed validation.
+- Every verified `BUG` is fixed: none left **Open** or **reverted**.
 - The adversary's verdict is `approve`, or each of its findings was fixed or rejected with a reason.
 - All four reviewers reported (stand-ins count).
 
