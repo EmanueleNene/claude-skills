@@ -1,39 +1,47 @@
 ---
 name: commit-push-merge
-description: "Commit with a caveman-short message, push, and merge into the default branch so everything goes live, on any branch, no ticket needed. Use when the user says 'commit push and merge', 'ship it live', or invokes /commit-push-merge."
+description: "Commit, push, and merge into the default branch so everything goes live, on any branch, no ticket to close. Use when the user says 'commit push and merge' with no issue #N, or 'ship it live'."
 ---
 
 # Commit, push, merge
 
-One run takes local work all the way live. Invoking this skill authorizes every step below: commit, push the branch, merge into the default branch, push the default branch. Ask only when scope is uncertain or a step stops.
+Invoking this skill authorizes every step below. Ask only when scope is uncertain or a step stops.
 
 ## Steps
 
-1. **Scope and validate** as in `commit-push` steps 1-2: read repo rules, sort every change into include / leave out / uncertain, run required checks.
-   For code changes (not docs or tests), run `/simplify` on the changed lines.
-   Done when the exact file set is known and its checks pass.
+1. **Scope and validate.** Scope as in `commit-push` step 1, including commits already ahead on the branch.
+   For code changes (not docs or tests), run `/simplify` on the changed lines, then validate as in `commit-push` step 2.
+   Note from the repo rules whether it merges only via pull requests, and its merge style.
+   Done when the exact scope is known and its checks pass on the final content.
 
-2. **Message.** Draft the message from the final diff, then run it through `caveman:caveman-commit` to make it short.
-   Keep the repo's commit format and the user's attribution rules: add no `Claude-Session:` trailer and no `Co-Authored-By`.
-   Done when the short message still says what changed and why.
+2. **Message.** Draft as in `commit-push` step 3, then shorten it with `caveman:caveman-commit`.
+   Done when the short message keeps the repo format and attribution rules and still says what changed and why.
 
-3. **Commit.** Stage explicit paths only, check `git diff --cached --stat` matches step 1, commit with a message file. Let hooks run; never amend.
-   Done when `git status` shows nothing of the selected scope.
+3. **Commit** as in `commit-push` step 4.
 
-4. **Push the current branch** with `git push -u origin <branch>`.
+4. **Push the current branch.** `git fetch origin`, then `git push -u origin <branch>`.
+   Rejected or diverged: stop and report. Never force-push.
    Done when `git status -sb` shows the branch in sync with its remote.
 
-5. **Merge.** Find the default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` (strip `origin/`).
-   - **Already on the default branch:** nothing to merge; step 4 already put it live. Skip to step 6.
-   - **Feature branch:** check `git worktree list`. If the default branch is checked out in another worktree, run the commands there with `git -C <that-worktree>`; else `git switch <default>`. Then:
+5. **Merge.** Default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` (strip `origin/`); if unset, run `git remote set-head origin --auto` and retry.
+   - **Already on the default branch:** skip to step 6.
+   - **PR-only repo:** stop here and offer `gh pr create --base <default> --head <branch>`.
+   - **Repo requires a merge style other than `--no-ff`** (squash, rebase): stop and report.
+   - **Feature branch:** the merge runs where `<default>` is checked out (`git worktree list`); elsewhere use `git -C "<that-worktree>"`, else `git switch <default>` in this one. Before merging, both must hold, else stop and report:
+     - that worktree is clean: `git status --porcelain` is empty;
+     - local `<default>` has no unpushed commits: `git log --oneline origin/<default>..<default>` is empty.
+
+     Then:
      ```
-     git pull --ff-only
+     git pull --ff-only origin <default>
      git merge --no-ff <branch> -m "Merge <branch>"
      git push origin <default>
      ```
-   - **Conflict, rejected push, or a repo that merges only via pull requests:** stop and report. Never force-push, never resolve conflicts on your own. For PR-only repos, offer `gh pr create`.
-   Keep the feature branch; delete it only if the user asks.
-   Done when the default branch is pushed, or the stop reason is reported.
+   - **Merge conflict:** `git merge --abort`, then stop and report. Never resolve conflicts on your own.
+   - **Push of `<default>` rejected:** stop and report that local `<default>` holds an unpushed merge commit.
 
-6. **Verify and report.** `git status -sb` shows the default branch in sync with origin, and `git branch -r --contains <commit>` lists `origin/<default>`.
-   Report in plain words: commit hash and subject, branches pushed, merge result, and what is left uncommitted locally.
+   Keep the feature branch; delete it only if the user asks.
+   Done when `<default>` is pushed, or the stop reason is reported.
+
+6. **Verify and report.** Where `<default>` is checked out, `git status -sb` shows it in sync with `origin/<default>`, and `git branch -r --contains <commit>` lists `origin/<default>`. Skip the check if step 5 stopped.
+   Report in plain words: commit hash and subject, branches pushed, merge result or stop reason, and what is left uncommitted locally.
