@@ -32,7 +32,7 @@ Write from the final diff and its established purpose. Follow repository convent
 - Put the concrete change and distinguishing behavior in the subject, so `git log --oneline` is useful. Avoid vague subjects such as "update files" or "address feedback".
 - Use a body only when the subject leaves out an important reason, behavior change, compatibility impact, or limitation. Lead with the most consequential missing fact; usually one short paragraph or a few bullets suffice.
 - Omit file inventories, implementation narration, repeated subject text, routine check logs, and unsupported claims. Include validation details only when they materially affect interpretation of the change.
-- Include issue references and required trailers when applicable. Follow user attribution rules and use only real, available session links.
+- Include issue references and required trailers when applicable. Follow user attribution rules: no `Claude-Session:` trailer, no session link, no `Co-Authored-By`.
 - Make each commit one coherent change. Split independent work when grouping is clear; ask when splitting would require guessing intent. Preserve necessary dependencies within a commit.
 
 Example:
