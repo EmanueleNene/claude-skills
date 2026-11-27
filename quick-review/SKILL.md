@@ -1,7 +1,6 @@
 ---
 name: quick-review
-description: Light review of a diff mid-work - bugs, simplify, yagni - by Agy (Gemini 4 Hydrogen) to spare Claude usage, with a preview patch; edits only on your go. No commit.
-disable-model-invocation: true
+description: "Quick mid-work review of a diff on Agy (Gemini Hydrogen), sparing Claude usage: bugs, simplify, yagni, as a short table plus a preview patch; edits only on approval, never commits. Use when the user wants a fast check or second look at work in progress, or before continuing on a risky edit."
 ---
 
 # Quick Review

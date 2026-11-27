@@ -1,7 +1,6 @@
 ---
 name: no-mistake
-description: End-of-work gate - correctness, simplify + yagni, Codex, and adversarial reviews on one diff, run on Agy Hydrogen and Codex; when green, commits, pushes, and closes the ticket.
-disable-model-invocation: true
+description: "Final multi-model review gate on a finished diff: correctness, simplify + yagni, Codex, and adversarial reviews (Agy Hydrogen, Codex), fixes applied once, then commit, push, and ticket close when green. Use when work is done and must be verified before shipping, when the user says no-mistake or final check, or when a workflow reaches its final review stage."
 ---
 
 # No Mistake
@@ -140,7 +139,7 @@ Done when the first and last lines alone tell the user what happened and what to
 
 ## 8. Ship when green
 
-Invoking `/no-mistake` authorizes commit, push, and ticket close when the gate is **green**; the user wants no intervention on a clean run. If the user said not to publish, stop after the report. For a review without shipping they run `/quick-review`.
+The user typing `/no-mistake` (or asking for no-mistake in their own words) authorizes commit, push, and ticket close when the gate is **green**; the user wants no intervention on a clean run. Invoked by an agent or another skill, it carries only the publishing authorization the user already gave in this conversation; without it, stop after the report with `GREEN - stopped (no publish)` and name `/commit-push`. If the user said not to publish, stop after the report. For a review without shipping they run `/quick-review`.
 
 **Green** means all of these hold:
 
